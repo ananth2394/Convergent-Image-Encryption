@@ -7,6 +7,7 @@ import HashFile
 import shelve
 
 shelfname = "tempshelf.db"
+keyshelfname = "keyshelf.db"
 
 def convergent_encrypt_file(in_filename,out_filename=None,user_key="123456",chunksize=64*1024):
     """
@@ -105,7 +106,8 @@ def dedup_convergent_encrypt_file(in_filename,user_key="123456",chunksize=64*102
         
     if not(encrypted_file_name==None):
         #file already encrypted before probably
-        if os.path.exists(os.getcwd()+ "\\decrypted_files\\" + encrypted_file_name):
+        if os.path.exists(os.getcwd()+ "\\encrypted_files\\" + encrypted_file_name):
+            print "File exists. No need to encrypt"
             return
         else:
             basic_filename = os.path.basename(encrypted_file_name)
@@ -114,18 +116,21 @@ def dedup_convergent_encrypt_file(in_filename,user_key="123456",chunksize=64*102
             convergent_encrypt_file(in_filename,os.path.splitext(basic_filename)[0],user_key,chunksize)
     
     else:
-        out_filename = str(HashFile.hash_file(in_filename,hashlib.md5(),chunksize)[1])
+        convergent_encrypt_file(in_filename,"tmp",user_key,chunksize)
+        cur_dir = os.getcwd()
+        out_filename = str(HashFile.hash_file(cur_dir+"\\encrypted_files\\"+"tmp.enc",hashlib.sha256(),chunksize)[1])
+        os.rename(cur_dir+"\\encrypted_files\\"+"tmp.enc",cur_dir+"\\encrypted_files\\"+out_filename+".enc")        
         d = shelve.open(shelfname)
         try:    
             d[str(in_filename)]=str(out_filename)
         finally:
             d.close()
         
-        convergent_encrypt_file(in_filename,out_filename,user_key,chunksize)
+        #convergent_encrypt_file(in_filename,out_filename,user_key,chunksize)
 
 def dedup_convergent_decrypt_file(in_filename,out_filename=None,user_key="123456",chunksize=64*1024):
     
-    convergent_decrypt_file(in_filename,out_filename,user_key)
+    convergent_decrypt_file(in_filename,out_filename,user_key,chunksize)
         
         
     
