@@ -38,6 +38,11 @@ class App:
         self.passg = Entry(master, show="*", width=20)
         self.passg.pack()
         
+        self.out_filelabel=Label(master, text="Enter Destination File name:")
+        self.out_filelabel.pack()
+        self.out_filename=Entry(master,width=20)
+        self.out_filename.pack()        
+        
         self.encrypt = Button(master, text="Convergent Encrypt", fg="black", command=self.file_open, width=25,height=5);
         self.encrypt.pack(side=LEFT)
         self.decrypt = Button(master,text="Convergent Decrypt", fg="black",command=self.cipher_open, width=25,height=5)
@@ -62,7 +67,7 @@ class App:
             in_filename = askopenfilename()
             print "File: " +  in_filename
             self.file_path_e = os.path.dirname(in_filename)
-            ConvergentEncrypt.convergent_encrypt_file(in_filename,user_key)
+            ConvergentEncrypt.dedup_convergent_encrypt_file(in_filename=str(in_filename),user_key=user_key)
             self.enc_success(in_filename)
     def cipher_open(self):
         self.file_path_d=None
@@ -75,7 +80,13 @@ class App:
             in_filename = askopenfilename()
             self.file_path_d = os.path.dirname(in_filename)
             # decrypt the ciphertext
-            ConvergentEncrypt.convergent_decrypt_file(in_filename,user_key)
+            out_file=None
+            if(self.out_filename.get()==""):
+                out_file=None
+            else:
+                out_file=self.out_filename.get();
+            
+            ConvergentEncrypt.dedup_convergent_decrypt_file(in_filename=in_filename,out_filename=out_file,user_key=user_key)
             
 
 
