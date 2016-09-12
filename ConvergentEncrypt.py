@@ -4,7 +4,11 @@ import hashlib
 import os
 import binascii
 import HashFile
-def convergent_encrypt_file(in_filename,user_key,chunksize=64*1024):
+import shelve
+
+shelfname = "tempshelf.db"
+
+def convergent_encrypt_file(in_filename,out_filename=None,user_key="123456",chunksize=64*1024):
     """
         convergently encrypts file in_filename
         
@@ -17,8 +21,12 @@ def convergent_encrypt_file(in_filename,user_key,chunksize=64*1024):
     new_file_path = cur_dir+"\\encrypted_files"
     new_key_path = cur_dir + "\\encryption_keys"
     
-    new_file_name = os.path.join(new_file_path,basic_file_name+'.enc') ;
-    new_key_name = os.path.join(new_key_path,basic_file_name+'.key');
+    if(out_filename==None):
+        new_file_name = os.path.join(new_file_path,basic_file_name+'.enc') ;
+        new_key_name = os.path.join(new_key_path,basic_file_name+'.key');
+    else:
+        new_file_name = os.path.join(new_file_path,out_filename+'.enc') ;
+        new_key_name = os.path.join(new_key_path,out_filename+'.key');
     
     generated_key = HashFile.hash_file(in_filename,hashlib.sha256())[0]
     tmp_key_path = "tmp.key"
@@ -40,10 +48,10 @@ def convergent_encrypt_file(in_filename,user_key,chunksize=64*1024):
     EncryptFile.encrypt_file(generated_key,in_filename,new_file_name,chunksize)
     
     #Write encrypted key and delete tmp.key file
-    EncryptFile.encrypt_file(user_key,tmp_key_path,new_key_name,chunksize)
+    EncryptFile.encrypt_file(hashlib.sha256(user_key).digest(),tmp_key_path,new_key_name,chunksize)
     os.remove(tmp_key_path)
     
-def convergent_decrypt_file(in_filename,user_key,chunksize=64*1024):
+def convergent_decrypt_file(in_filename,out_filename=None,user_key="123456",chunksize=64*1024):
     """
     convergently decrypts in_filename
     """
@@ -57,18 +65,23 @@ def convergent_decrypt_file(in_filename,user_key,chunksize=64*1024):
       
     new_file_path = cur_dir+"\\decrypted_files"
     new_key_path = cur_dir + "\\encryption_keys"    
-    
-    new_file_name = os.path.join(new_file_path,os.path.splitext(basic_filename)[0]) ;
+    print "Destination file name: "+ out_filename
+    if(out_filename==None):
+        new_file_name = os.path.join(new_file_path,os.path.splitext(basic_filename)[0]) ;
         
+    else:
+        new_file_name = os.path.join(new_file_path,out_filename) ;
+        
+    
     new_key_name = os.path.join(new_key_path,os.path.splitext(basic_filename)[0]+".key") ;
-    
-    
+    print "New file name:" + new_file_name
+    print "New key name:" + new_key_name    
     # create decrypted_files directory
     if not os.path.exists(new_file_path):
         os.makedirs(new_file_path)
     #deccrypt key file
     
-    EncryptFile.decrypt_file(user_key,new_key_name,"tmp.key",chunksize)
+    EncryptFile.decrypt_file(hashlib.sha256(user_key).digest(),new_key_name,"tmp.key",chunksize)
    
     with open("tmp.key",'rb') as infile:
         generated_key=infile.read(chunksize)
@@ -77,3 +90,45 @@ def convergent_decrypt_file(in_filename,user_key,chunksize=64*1024):
     #decrypt main file
     os.remove("tmp.key")    
     EncryptFile.decrypt_file(generated_key,in_filename,new_file_name,chunksize)
+    
+def dedup_convergent_encrypt_file(in_filename,user_key="123456",chunksize=64*1024):
+    
+    d = shelve.open(shelfname)
+    encrypted_file_name = None    
+    try:    
+        encrypted_file_name = str(d[str(in_filename)])
+    except KeyError:
+        print "Caught!"
+        encrypted_file_name = None
+    finally:
+        d.close()
+        
+    if not(encrypted_file_name==None):
+        #file already encrypted before probably
+        if os.path.exists(os.getcwd()+ "\\decrypted_files\\" + encrypted_file_name):
+            return
+        else:
+            basic_filename = os.path.basename(encrypted_file_name)
+            print "Basic filename: " + basic_filename
+            print "Without ext: " + os.path.splitext(basic_filename)[0]
+            convergent_encrypt_file(in_filename,os.path.splitext(basic_filename)[0],user_key,chunksize)
+    
+    else:
+        out_filename = str(HashFile.hash_file(in_filename,hashlib.md5(),chunksize)[1])
+        d = shelve.open(shelfname)
+        try:    
+            d[str(in_filename)]=str(out_filename)
+        finally:
+            d.close()
+        
+        convergent_encrypt_file(in_filename,out_filename,user_key,chunksize)
+
+def dedup_convergent_decrypt_file(in_filename,out_filename=None,user_key="123456",chunksize=64*1024):
+    
+    convergent_decrypt_file(in_filename,out_filename,user_key)
+        
+        
+    
+    
+        
+    
