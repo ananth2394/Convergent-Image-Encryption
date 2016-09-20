@@ -32,7 +32,7 @@ def convergent_encrypt_file(in_filename,out_filename=None,key_filename=None,user
         new_file_name = os.path.join(new_file_path,out_filename+'.enc') ;
         new_key_name = os.path.join(new_key_path,key_filename+'.key');
     
-    generated_key = HashFile.hash_file(in_filename,hashlib.sha256())[0]
+    generated_key,key_hex = HashFile.hash_file(in_filename,hashlib.sha256())
     tmp_key_path = "tmp.key"
     
     with open(tmp_key_path,'wb') as outfile:
@@ -49,6 +49,7 @@ def convergent_encrypt_file(in_filename,out_filename=None,key_filename=None,user
         os.makedirs(new_key_path)
         
     #Write encrypted file
+    print "key used: " + key_hex
     EncryptFile.encrypt_file(generated_key,in_filename,new_file_name,chunksize)
     
     #Write encrypted key and delete tmp.key file
@@ -131,17 +132,30 @@ def dedup_convergent_encrypt_file(in_filename,user_key="123456",chunksize=64*102
             convergent_encrypt_file(in_filename,os.path.splitext(basic_filename)[0],key_filename,user_key,chunksize)
     
     else:
-        convergent_encrypt_file(in_filename,"tmp","tmp",user_key,chunksize)
+        convergent_encrypt_file(in_filename,"tmp1","tmp1",user_key,chunksize)
         cur_dir = os.getcwd()
-        out_filename = str(HashFile.hash_file(cur_dir+"\\encrypted_files\\"+"tmp.enc",hashlib.sha256(),chunksize)[1])
-        out_filename=str(hashlib.sha256(out_filename).hexdigest())   
+        
+        out_filename = HashFile.hash_file(cur_dir+"\\encrypted_files\\"+"tmp1.enc",hashlib.sha256(),chunksize)[1]
+        #out_filename = HashFile.hash_file(in_filename,hashlib.sha256(),chunksize)[1]
+        print "Init file name:" + out_filename
+        out_filename=hashlib.sha256(out_filename).hexdigest()
+        print "Final file name:" + out_filename
         
         h = hashlib.sha256(out_filename)
         h.update(user_key)
         key_filename = str(h.hexdigest()) 
         
-        os.rename(cur_dir+"\\encrypted_files\\"+"tmp.enc",cur_dir+"\\encrypted_files\\"+out_filename+".enc") 
-        os.rename(cur_dir+"\\encryption_keys\\"+"tmp.key",cur_dir+"\\encryption_keys\\"+key_filename+".key")
+        if not os.path.exists(os.getcwd()+ "\\encrypted_files\\" + out_filename+".enc"):
+            os.rename(cur_dir+"\\encrypted_files\\"+"tmp1.enc",cur_dir+"\\encrypted_files\\"+out_filename+".enc") 
+        else:
+            os.remove(cur_dir+"\\encrypted_files\\"+"tmp1.enc")        
+        
+        if not os.path.exists(cur_dir+"\\encryption_keys\\"+key_filename+".key"):
+            os.rename(cur_dir+"\\encryption_keys\\"+"tmp1.key",cur_dir+"\\encryption_keys\\"+key_filename+".key")
+        else:
+            os.remove(cur_dir+"\\encryption_keys\\"+"tmp1.key")
+        
+        
         
         d = shelve.open(shelfname)
         try:    
