@@ -1,3 +1,3 @@
 # DupliCrypt - Convergent-Image-Encryption
 
-This is a simple file server convergently encrypting files.
+Duplicrypt is a secure image storage application written in Python. It optimizes space storae for similar looking images using de-duplication.
